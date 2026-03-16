@@ -1,0 +1,90 @@
+# Template only: keep this file under examples/ so it does not auto-run in this repository.
+# Copy to .github/workflows/regression-check.yml in your own repo.
+
+name: EvalOps Regression Check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  regression-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run baseline and candidate suites
+        run: |
+          mkdir -p artifacts
+          python -m evalops_kit.cli run \
+            --suite examples/golden_path/suite_baseline.toml \
+            --out artifacts/base-run
+          # Replace this with your candidate suite/trace generation path.
+          python -m evalops_kit.cli run \
+            --suite examples/golden_path/suite_regression.toml \
+            --out artifacts/candidate-run
+
+      - name: Diff runs with gates
+        id: diff
+        shell: bash
+        run: |
+          set +e
+          python -m evalops_kit.cli diff \
+            --base artifacts/base-run \
+            --cand artifacts/candidate-run \
+            --suite examples/golden_path/suite_baseline.toml \
+            --out artifacts/diff-report.md
+          diff_exit=$?
+          echo "exit_code=${diff_exit}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Append concise markdown summary
+        if: always()
+        shell: bash
+        run: |
+          diff_exit="${{ steps.diff.outputs.exit_code }}"
+          if [ "${diff_exit}" = "0" ]; then
+            status="PASS"
+          else
+            status="FAIL"
+          fi
+          {
+            echo "## EvalOps regression check"
+            echo ""
+            echo "- Status: **${status}**"
+            echo "- Diff exit code: \`${diff_exit}\`"
+            echo "- Baseline artifacts: \`artifacts/base-run\`"
+            echo "- Candidate artifacts: \`artifacts/candidate-run\`"
+            echo "- Diff report: \`artifacts/diff-report.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload run and diff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evalops-regression-artifacts
+          path: |
+            artifacts/base-run
+            artifacts/candidate-run
+            artifacts/diff-report.md
+
+      - name: Fail job when gates fail
+        if: always()
+        shell: bash
+        run: |
+          diff_exit="${{ steps.diff.outputs.exit_code }}"
+          if [ "${diff_exit}" != "0" ]; then
+            echo "Regression gates failed (diff exit=${diff_exit})."
+            exit 1
+          fi

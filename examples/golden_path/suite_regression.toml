@@ -1,0 +1,36 @@
+version = "0.1"
+name = "golden-path-suite"
+dataset = "dataset.jsonl"
+traces_dir = "traces_regression"
+trace_filename_pattern = "{case_id}.json"
+
+[[graders]]
+name = "mentions_30_day"
+kind = "rule_regex"
+pattern = "\\b30-day\\b"
+must_match = true
+flags = "i"
+
+[[graders]]
+name = "tool_policy"
+kind = "trace_tool_policy"
+require_tools = ["policy_lookup"]
+forbid_tools = ["shell"]
+fail_on_tool_error = true
+
+[[gates]]
+kind = "overall_avg_drop_max"
+max_drop = 0.0
+
+[[gates]]
+kind = "per_grader_avg_drop_max"
+grader = "mentions_30_day"
+max_drop = 0.0
+
+[[gates]]
+kind = "missing_traces_increase_max"
+max_increase = 0
+
+[[gates]]
+kind = "invalid_traces_increase_max"
+max_increase = 0

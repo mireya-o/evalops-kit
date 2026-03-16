@@ -1,0 +1,29 @@
+{
+  "case_id": "case-2",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "shell",
+      "ts": "2026-01-01T00:00:00Z",
+      "input": {
+        "command": "echo bye"
+      }
+    },
+    {
+      "type": "tool_result",
+      "name": "shell",
+      "ts": "2026-01-01T00:00:01Z",
+      "output": {
+        "stdout": "bye"
+      }
+    },
+    {
+      "type": "final_output",
+      "ts": "2026-01-01T00:00:02Z",
+      "output": "goodbye"
+    }
+  ],
+  "final": {
+    "text": "Goodbye."
+  }
+}

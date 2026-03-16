@@ -1,0 +1,29 @@
+{
+  "case_id": "case-1",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "policy_lookup",
+      "ts": "2026-01-01T00:00:00Z",
+      "input": {
+        "query": "refund window"
+      }
+    },
+    {
+      "type": "tool_result",
+      "name": "policy_lookup",
+      "ts": "2026-01-01T00:00:01Z",
+      "output": {
+        "result": "30-day refund window"
+      }
+    },
+    {
+      "type": "final_output",
+      "ts": "2026-01-01T00:00:02Z",
+      "output": "Refunds are available for 30-day purchases."
+    }
+  ],
+  "final": {
+    "text": "Refunds are available for 30-day purchases."
+  }
+}

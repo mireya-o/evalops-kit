@@ -1,0 +1,29 @@
+{
+  "case_id": "case-1",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "shell",
+      "ts": "2026-01-01T00:00:00Z",
+      "input": {
+        "command": "echo fallback policy"
+      }
+    },
+    {
+      "type": "tool_result",
+      "name": "shell",
+      "ts": "2026-01-01T00:00:01Z",
+      "output": {
+        "stdout": "policy unavailable"
+      }
+    },
+    {
+      "type": "final_output",
+      "ts": "2026-01-01T00:00:02Z",
+      "output": "Refunds are available in line with store policy."
+    }
+  ],
+  "final": {
+    "text": "Refunds are available in line with store policy."
+  }
+}

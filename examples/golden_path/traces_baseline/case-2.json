@@ -1,0 +1,29 @@
+{
+  "case_id": "case-2",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "policy_lookup",
+      "ts": "2026-01-01T00:01:00Z",
+      "input": {
+        "query": "restocking fee"
+      }
+    },
+    {
+      "type": "tool_result",
+      "name": "policy_lookup",
+      "ts": "2026-01-01T00:01:01Z",
+      "output": {
+        "result": "No restocking fee"
+      }
+    },
+    {
+      "type": "final_output",
+      "ts": "2026-01-01T00:01:02Z",
+      "output": "There is no restocking fee and returns remain 30-day eligible."
+    }
+  ],
+  "final": {
+    "text": "There is no restocking fee and returns remain 30-day eligible."
+  }
+}

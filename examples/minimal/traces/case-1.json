@@ -1,0 +1,29 @@
+{
+  "case_id": "case-1",
+  "events": [
+    {
+      "type": "tool_call",
+      "name": "lookup",
+      "ts": "2026-01-01T00:00:00Z",
+      "input": {
+        "query": "greeting"
+      }
+    },
+    {
+      "type": "tool_result",
+      "name": "lookup",
+      "ts": "2026-01-01T00:00:01Z",
+      "output": {
+        "value": "hello"
+      }
+    },
+    {
+      "type": "final_output",
+      "ts": "2026-01-01T00:00:02Z",
+      "output": "hello from lookup"
+    }
+  ],
+  "final": {
+    "text": "Hello from lookup."
+  }
+}
