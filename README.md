@@ -40,7 +40,7 @@ Requirements:
 From a fresh machine or shell:
 
 ```bash
-git clone https://github.com/mireya001/evalops-kit.git
+git clone https://github.com/mireya-o/evalops-kit.git
 cd evalops-kit
 python3 -m venv .venv
 ./.venv/bin/python -m pip install -U pip
