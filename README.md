@@ -54,6 +54,11 @@ After `run`, inspect:
 - `/tmp/evalops-run/cases.jsonl`
 - `/tmp/evalops-run/report.md`
 
+Important:
+- This quickstart is a deterministic sanity check on the bundled minimal fixtures.
+- The bundled minimal suite intentionally includes one missing trace, so seeing `traces_missing=1` in the diff output is expected.
+- For a true baseline-vs-candidate pass/fail regression demo, run `./.venv/bin/python scripts/demo_golden_path.py`.
+
 If you want contributor tooling as well, use:
 
 ```bash
