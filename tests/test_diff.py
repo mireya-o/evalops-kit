@@ -159,6 +159,111 @@ def test_diff_gate_failure_returns_non_zero_and_writes_report(tmp_path: Path) ->
     assert "FAIL `invalid_traces_increase_max`" in report
 
 
+def test_diff_without_suite_rejects_suite_identity_mismatch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    base_dir = tmp_path / "base-run"
+    cand_dir = tmp_path / "cand-run"
+    _write_run(
+        base_dir,
+        summary={"suite": {"name": "demo-suite", "version": "0.1"}},
+        cases=[{"case_id": "case-1", "final_score": 1.0, "tags": []}],
+    )
+    _write_run(
+        cand_dir,
+        summary={"suite": {"name": "other-suite", "version": "0.1"}},
+        cases=[{"case_id": "case-1", "final_score": 1.0, "tags": []}],
+    )
+
+    exit_code = main(["diff", "--base", str(base_dir), "--cand", str(cand_dir)])
+
+    assert exit_code == 1
+    stderr = capsys.readouterr().err
+    assert "suite identity must match when --suite is not provided" in stderr
+    assert "demo-suite" in stderr
+    assert "other-suite" in stderr
+
+
+@pytest.mark.skipif(not HAS_TOMLLIB, reason="tomllib is unavailable on this Python version")
+def test_diff_with_suite_rejects_summary_suite_identity_mismatch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    base_dir = tmp_path / "base-run"
+    cand_dir = tmp_path / "cand-run"
+    _write_run(
+        base_dir,
+        summary={"suite": {"name": "demo-suite", "version": "0.1"}},
+        cases=[{"case_id": "case-1", "final_score": 1.0, "tags": []}],
+    )
+    _write_run(
+        cand_dir,
+        summary={"suite": {"name": "demo-suite", "version": "0.1"}},
+        cases=[{"case_id": "case-1", "final_score": 1.0, "tags": []}],
+    )
+
+    suite_path = tmp_path / "suite.toml"
+    suite_path.write_text(
+        "\n".join(
+            [
+                'version = "1.0"',
+                'name = "expected-suite"',
+                'dataset = "dataset.jsonl"',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "diff",
+            "--base",
+            str(base_dir),
+            "--cand",
+            str(cand_dir),
+            "--suite",
+            str(suite_path),
+        ]
+    )
+
+    assert exit_code == 1
+    stderr = capsys.readouterr().err
+    assert "does not match --suite" in stderr
+    assert "expected-suite" in stderr
+    assert "demo-suite" in stderr
+
+
+def test_diff_rejects_case_id_set_mismatch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    base_dir = tmp_path / "base-run"
+    cand_dir = tmp_path / "cand-run"
+    _write_run(
+        base_dir,
+        summary={"suite": {"name": "demo-suite", "version": "0.1"}},
+        cases=[
+            {"case_id": "case-1", "final_score": 1.0, "tags": []},
+            {"case_id": "case-2", "final_score": 1.0, "tags": []},
+        ],
+    )
+    _write_run(
+        cand_dir,
+        summary={"suite": {"name": "demo-suite", "version": "0.1"}},
+        cases=[
+            {"case_id": "case-1", "final_score": 1.0, "tags": []},
+            {"case_id": "case-3", "final_score": 1.0, "tags": []},
+        ],
+    )
+
+    exit_code = main(["diff", "--base", str(base_dir), "--cand", str(cand_dir)])
+
+    assert exit_code == 1
+    stderr = capsys.readouterr().err
+    assert "case_id sets do not match" in stderr
+    assert "case-2" in stderr
+    assert "case-3" in stderr
+
+
 def _write_run(run_dir: Path, summary: dict, cases: list[dict]) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "summary.json").write_text(

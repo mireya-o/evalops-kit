@@ -73,8 +73,8 @@ def _parse_regex_flags(flags: str) -> int:
 
 
 def _event_indicates_tool_error(event: TraceEvent) -> bool:
-    if event.type == "error":
+    if event.type in {"error", "tool_error"}:
         return True
-    if event.type != "tool_result":
+    if event.type not in {"tool_call", "tool_result"}:
         return False
     return event.error is not None

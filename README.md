@@ -35,7 +35,7 @@ The diff command exits non-zero on gate failure, which is directly usable in Git
 
 Requirements:
 - Git
-- Python 3.10+
+- Python 3.11+
 
 From a fresh machine or shell:
 
