@@ -86,6 +86,8 @@ def build_diff_report(
     suite_config: SuiteConfig | None = None
     if suite_path is not None:
         suite_config = load_suite(suite_path)
+    _validate_comparable_runs(base, cand, suite_config=suite_config)
+
     gates = tuple() if suite_config is None else suite_config.gates
     gate_results = _evaluate_gates(base, cand, gates)
 
@@ -570,6 +572,106 @@ def _optional_int(data: dict[str, Any], key: str, ctx: str) -> int | None:
     if not isinstance(value, int) or isinstance(value, bool):
         raise DiffError(f"Invalid {ctx}: field '{key}' must be an integer when provided.")
     return value
+
+
+def _validate_comparable_runs(
+    base: RunArtifacts, cand: RunArtifacts, suite_config: SuiteConfig | None
+) -> None:
+    _validate_case_id_sets(base, cand)
+    if suite_config is None:
+        _validate_matching_suite_identity_without_suite(base, cand)
+        return
+
+    expected_identity = _normalize_suite_identity(
+        suite_config.name,
+        suite_config.version,
+        label=f"suite {suite_config.path}",
+    )
+    _validate_summary_matches_suite_file(base, expected_identity, label="base")
+    _validate_summary_matches_suite_file(cand, expected_identity, label="cand")
+
+
+def _validate_case_id_sets(base: RunArtifacts, cand: RunArtifacts) -> None:
+    base_case_ids = set(base.cases_by_id)
+    cand_case_ids = set(cand.cases_by_id)
+    missing_in_cand = sorted(base_case_ids - cand_case_ids)
+    missing_in_base = sorted(cand_case_ids - base_case_ids)
+    if not missing_in_cand and not missing_in_base:
+        return
+    raise DiffError(
+        "Invalid diff inputs: cases.jsonl case_id sets do not match. "
+        f"missing in cand: {_fmt_case_id_list(missing_in_cand)}; "
+        f"missing in base: {_fmt_case_id_list(missing_in_base)}."
+    )
+
+
+def _validate_matching_suite_identity_without_suite(base: RunArtifacts, cand: RunArtifacts) -> None:
+    base_identity = _normalize_suite_identity(
+        base.suite_name,
+        base.suite_version,
+        label="base summary",
+    )
+    cand_identity = _normalize_suite_identity(
+        cand.suite_name,
+        cand.suite_version,
+        label="cand summary",
+    )
+    if base_identity != cand_identity:
+        base_identity_display = _fmt_suite_identity(base_identity)
+        cand_identity_display = _fmt_suite_identity(cand_identity)
+        raise DiffError(
+            "Invalid diff inputs: base and cand suite identity must match "
+            "when --suite is not provided "
+            f"(base={base_identity_display}, cand={cand_identity_display})."
+        )
+
+
+def _validate_summary_matches_suite_file(
+    run: RunArtifacts, expected_identity: tuple[str, str], label: str
+) -> None:
+    run_identity = _normalize_suite_identity(
+        run.suite_name,
+        run.suite_version,
+        label=f"{label} summary",
+    )
+    if run_identity != expected_identity:
+        raise DiffError(
+            f"Invalid diff inputs: {label} summary suite identity does not match --suite "
+            f"(expected={_fmt_suite_identity(expected_identity)}, "
+            f"{label}={_fmt_suite_identity(run_identity)})."
+        )
+
+
+def _normalize_suite_identity(
+    name: str | None, version: str | None, *, label: str
+) -> tuple[str, str] | None:
+    if name is None and version is None:
+        return None
+    if name is None or version is None:
+        raise DiffError(
+            f"Invalid diff inputs: {label} must include both suite.name and suite.version."
+        )
+
+    normalized_name = name.strip()
+    normalized_version = version.strip()
+    if not normalized_name or not normalized_version:
+        raise DiffError(
+            f"Invalid diff inputs: {label} must include non-empty suite.name and suite.version."
+        )
+    return normalized_name, normalized_version
+
+
+def _fmt_suite_identity(identity: tuple[str, str] | None) -> str:
+    if identity is None:
+        return "none"
+    name, version = identity
+    return f"{name!r}@{version!r}"
+
+
+def _fmt_case_id_list(case_ids: list[str]) -> str:
+    if not case_ids:
+        return "none"
+    return ", ".join(repr(case_id) for case_id in case_ids)
 
 
 def _select_suite_identity(base: RunArtifacts, cand: RunArtifacts) -> tuple[str | None, str | None]:

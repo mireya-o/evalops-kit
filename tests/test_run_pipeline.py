@@ -247,3 +247,63 @@ def test_run_command_writes_expected_artifacts_for_minimal_example(tmp_path: Pat
     assert "rule_regex_no_match:final_mentions_hello" in report
     assert "Missing traces (1)" in report
     assert "`case-3`" in report
+
+
+@pytest.mark.skipif(not HAS_TOMLLIB, reason="tomllib is unavailable on this Python version")
+def test_run_marks_tool_error_as_zero_score_when_fail_on_tool_error_enabled(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    traces_dir = tmp_path / "traces"
+    suite_path = tmp_path / "suite.toml"
+    out_dir = tmp_path / "run-artifacts"
+
+    traces_dir.mkdir(parents=True, exist_ok=True)
+    dataset_path.write_text('{"id":"case-1","input":{"prompt":"hello"}}\n', encoding="utf-8")
+    (traces_dir / "case-1.json").write_text(
+        json.dumps(
+            {
+                "case_id": "case-1",
+                "events": [
+                    {"type": "tool_call", "name": "lookup", "input": {"q": "hello"}},
+                    {"type": "tool_error", "name": "lookup", "error": {"message": "boom"}},
+                ],
+                "final": {"text": "fallback"},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    suite_path.write_text(
+        "\n".join(
+            [
+                'version = "0.1"',
+                'name = "tool-error-suite"',
+                'dataset = "dataset.jsonl"',
+                'traces_dir = "traces"',
+                "",
+                "[[graders]]",
+                'name = "tool_policy"',
+                'kind = "trace_tool_policy"',
+                "fail_on_tool_error = true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["run", "--suite", str(suite_path), "--out", str(out_dir)])
+    assert exit_code == 0
+
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["metrics"]["overall_avg_score"] == pytest.approx(0.0)
+    assert summary["metrics"]["per_grader_avg"]["tool_policy"] == pytest.approx(0.0)
+
+    case_rows = [
+        json.loads(line)
+        for line in (out_dir / "cases.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(case_rows) == 1
+    assert case_rows[0]["scores"]["tool_policy"] == 0.0
+    assert case_rows[0]["tags"] == ["tool_error"]
+    assert case_rows[0]["final_score"] == 0.0
